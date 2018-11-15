@@ -10,7 +10,7 @@ export default class LineChart extends Component {
 
   componentDidMount() {
 
-        var myChart = new Chart(this.props.id, {
+        this.chart = new Chart(this.props.id, {
             type: 'line',
             data: {
                 labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
@@ -46,6 +46,14 @@ export default class LineChart extends Component {
                 }
             }
         });
+
+        
+        this.props.data.subscribe(next => {
+            console.log('everytime', next, this.props.id)
+            this.chart.data.datasets[0].data.pop();
+            this.chart.data.datasets[0].data.push(next);
+            this.chart.update();        
+        })
   }
 
   render() {
