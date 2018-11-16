@@ -23,7 +23,8 @@ export default class App extends Component {
 		this.difference = 0;
 		this.chart1Data = initialData.slice();
 		this.chart2Data = initialData.slice();
-		this.chart3Data = initialData.slice();
+		this.chart3Data1 = initialData.slice();
+		this.chart3Data2 = initialData.slice();
 		this.chart4Data = initialData.slice();
 		this.state = {
 			isPLaying: false
@@ -52,6 +53,7 @@ export default class App extends Component {
 
 			// Subscriptions
 			message$.subscribe(data => {
+				this.difference = data.value - this.value;
 
 				this.time = data.time;
 				this.value = data.value;
@@ -60,15 +62,16 @@ export default class App extends Component {
 				this.oddCount = data.value % 2 === 0 ? this.oddCount : ++this.oddCount;
 				this.evenCount = data.value % 2 === 0 ? ++this.evenCount : this.evenCount;
 				this.medium = this.medium + data.value / (this.oddCount + this.evenCount);
-				this.difference = data.value - (this.chart4Data[this.chart4Data.length - 1] || 0);
+				
 
 				this.label = this.getModifiedData(this.label.slice(), new Date(data.time).getSeconds());
 				this.chart1Data = this.getModifiedData(this.chart1Data.slice(), this.value);
 				this.chart2Data = this.getModifiedData(this.chart2Data.slice(), this.medium);
-				this.chart3Data = this.getModifiedData(this.chart3Data.slice(), this.evenCount + this.oddCount);
+				this.chart3Data1 = this.getModifiedData(this.chart3Data1.slice(), this.evenCount);
+				this.chart3Data2 = this.getModifiedData(this.chart3Data2.slice(), this.oddCount)
 				this.chart4Data = this.getModifiedData(this.chart4Data.slice(), this.difference);
 
-				this.source.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data: this.chart3Data }, { label: this.label, data: this.chart4Data }]);
+				this.source.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data1: this.chart3Data1, data2: this.chart3Data2 }, { label: this.label, data: this.chart4Data }]);
 
 			});
 
@@ -120,7 +123,7 @@ export default class App extends Component {
 				</div>
 				<div className="row col-md-12">
 					<div className="col-md-6">
-						<LineChart data={this.source} name="Odd/Even Count" id="chart3" />
+						<LineChart data={this.source} name="Even Count" id="chart3" />
 					</div>
 
 					<div className="col-md-6">
