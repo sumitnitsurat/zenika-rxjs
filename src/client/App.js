@@ -27,22 +27,28 @@ export default class App extends Component {
 		this.chart3Data2 = initialData.slice();
 		this.chart4Data = initialData.slice();
 		this.state = {
-			isPLaying: false
+			isPLaying: false,
+			activeGraph: 'line'
 		}
 	}
 
 	componentWillMount() {
 		this.source = new Subject();
 		this.currentVal = new Subject();
+		window.graphType$ = new Subject();
 	}
+
+	componentDidMount() {
+		window.graphType$.next('line');
+	}
+
 
 	//graph to stablish the connection and subcribe to the connection to recieve random value, calculate the graph data and broadcast it to graphs
 	playGraph = () => {
 		this.io = connect('http://localhost:8000');
 
 		const connection$ = fromEvent(this.io, 'connect');
-		let that = this;
-		connection$.subscribe(socket => {
+		connection$.subscribe((d) => {
 			console.log(`Client connected`);
 
 			// Observables to recieve the events from socket.io backend
@@ -100,13 +106,23 @@ export default class App extends Component {
 		})
 	}
 
+	selectGrpah = (type) => {
+		window.graphType$.next(type);
+		this.setState({ activeGraph: type})
+	}
+
 	render() {
+		const {activeGraph} = this.state;
 		return (
 			<div className="container-fluid">
 				<div className="row" style={{ margin: 10 }}>
-					<div className="col-md-6" style={{ marginTop: 10 }}>
-						{!this.state.isPLaying ? <button type="button" className="btn btn-primary" onClick={this.playGraph}>Play</button> :
-							<button type="button" className="btn btn-primary" onClick={this.stopGraph}>Stop</button>}
+					<div className="col-md-3" style={{ marginTop: 10 }}>
+						{!this.state.isPLaying ? <button type="button" className="btn btn-primary play-btn" onClick={this.playGraph}>Play</button> :
+							<button type="button" className="btn btn-primary play-btn" onClick={this.stopGraph}>Stop</button>}
+					</div>
+					<div className="col-md-3 btn-group" role="group" style={{ marginTop: 10 }}>
+						<button type="button" onClick={() => this.selectGrpah('line')} name="line" className={`btn border-blue ${ activeGraph === 'line' ? 'btn-primary' : 'btn-default'}`}>Line Chart</button>
+						<button type="button" onClick={() =>this.selectGrpah('bar')} name="bar" className={`btn border-blue ${ activeGraph === 'bar' ? 'btn-primary' : 'btn-default'}`}>Bar Chart</button>
 					</div>
 					<div className="col-md-6">
 						<Ticker isPLaying={this.state.isPLaying} data={this.currentVal} />

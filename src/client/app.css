@@ -51,3 +51,12 @@ chart-display {
       box-shadow: 0 0 0 0 rgba(24,44,90,  0);
   }
 }
+
+.border-blue {
+  border: 1px solid blue !important;
+}
+
+.play-btn {
+  height: 50px;
+  width: 100px;
+}

@@ -5,14 +5,7 @@ const dataset2 = {
     label: 'Odd Count',
     data: [],
     backgroundColor: 'transparent',
-    borderColor: [
-        'rgba(255,99,132,1)',
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 206, 86, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(153, 102, 255, 1)',
-        'rgba(255, 159, 64, 1)'
-    ],
+    borderColor:'rgba(255,99,132,1)',
     borderWidth: 1
 };
 
@@ -22,23 +15,16 @@ export default class LineChart extends Component {
     }
 
   componentDidMount() {
-
+    window.graphType$.subscribe((type) => { 
         this.chart = new Chart(this.props.id, {
-            type: 'line',
+            type: type,
             data: {
                 labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
                 datasets: [{
                     label: this.props.name,
                     data: [],
-                    backgroundColor: 'transparent',
-                    borderColor: [
-                        'rgba(84, 145, 227, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ],
+                    backgroundColor:   type === 'line' ?  'transparent' : 'rgba(84, 145, 227, .2)',
+                    borderColor: 'rgba(84, 145, 227, 1)',
                     borderWidth: 1
                 }]
             },
@@ -52,6 +38,10 @@ export default class LineChart extends Component {
                 }
             }
         });
+
+        if(type === 'bar' && this.props.id === 'chart3') dataset2.backgroundColor = 'rgba(255,99,132, .2)';
+        if(type === 'line' && this.props.id === 'chart3') dataset2.backgroundColor = 'transparent';
+    });
         
         this.props.data.subscribe(next => {
 
