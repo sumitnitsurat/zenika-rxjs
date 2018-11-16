@@ -2,105 +2,133 @@ import React, { Component } from 'react';
 import './app.css';
 import ReactImage from './react.png';
 import LineChart from './chart/line-chart';
-import openSocket from 'socket.io-client';
-import {Observable, Subject, fromEvent} from 'rxjs';
-import {first, takeUntil, take, of} from 'rxjs/operators';
+import Ticker from './ticker';
 
-const  io = openSocket('http://localhost:8000');
-// io.on('connect', function(socket){
-//   console.log('connection is')
-// });
+import connect from 'socket.io-client';
+import { Observable, Subject, fromEvent } from 'rxjs';
+import { first, takeUntil, take, of } from 'rxjs/operators';
 
-var data = [];
+const initialData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const initialLabels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export default class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      time: 0,
-      value: 0,
-      oddCount: 0,
-      evenCount: 0,
-      medium: 0,
-      difference: 0,
-      chart1Data: [],
-      chart2Data: [],
-      chart3Data: [],
-      chart4Data: []
-    }
-    window.myData = [];
-  }
+	constructor(props) {
+		super(props);
+		this.time = 0;
+		this.value = 0;
+		this.oddCount = 0;
+		this.evenCount = 0;
+		this.medium = 0;
+		this.label = initialLabels;
+		this.difference = 0;
+		this.chart1Data = initialData.slice();
+		this.chart2Data = initialData.slice();
+		this.chart3Data = initialData.slice();
+		this.chart4Data = initialData.slice();
+		this.state = {
+			isPLaying: false
+		}
+	}
 
-  componentWillMount() {
-    //this.getValue();
-    this.source =  new Subject();
-    this.source2 =  new Subject();
-  }
+	componentWillMount() {
+		this.source = new Subject();
+		this.currentVal = new Subject();
+	}
 
-  componentDidMount() {
-    let connection$ = fromEvent(io, 'connect');
+	//graph to stablish the connection and subcribe to the connection to recieve random value, calculate the graph data and broadcast it to graphs
+	playGraph = () => {
+		this.io = connect('http://localhost:8000');
 
-    
-    let that = this;
-    connection$.subscribe(socket => {
-        console.log(`Client connected`);
+		const connection$ = fromEvent(this.io, 'connect');
+		let that = this;
+		connection$.subscribe(socket => {
+			console.log(`Client connected`);
 
-        // Observables
-        const disconnect$ = fromEvent(io, 'disconnect').pipe(first());
-        // const event$ = Subject.create('subscribeToTimer');
-        // event$.next(1000);
-        io.emit('subscribeToTimer', 1000);
-        const message$ = fromEvent(io, 'timer').pipe(takeUntil(disconnect$));
+			// Observables to recieve the events from socket.io backend
+			const disconnect$ = fromEvent(this.io, 'disconnect').pipe(first());
 
-        // Subscriptions
-        message$.subscribe(data => {
-            console.log(`Got message from client with data: ${data}`);
-            // io.emit('message', data); // Emit to all clients
-            //cb(null, timestamp)
-            // let time = data.time;
-            // let value = data.value;
-            // oddCount = data.value % 2 === 0 ? oddCount : oddCount++;
-            // evenCount = data.value % 2 === 0 ? evenCount++ : evenCount;
-            // medium = medium + data.value/oddCount+evenCount;
-            // difference = this.state.chart4Data[this.state.chart4Data.length-1] - data.value;
-            //window.source.map(x => console.log('x going to be', x))
-            // data.push({'a': d.value, 'b': d.value*2})
-            // pairs(data)
-            // .subscribe()
-           // window.myData = of([data.value]);
-             this.source.next(data.value);
-          this.source2.next(data.value * 2);
+			this.io.emit('subscribeToTimer', 1000);
+			const message$ = fromEvent(this.io, 'timer').pipe(takeUntil(disconnect$));
 
-        });
+			// Subscriptions
+			message$.subscribe(data => {
 
-        disconnect$.subscribe(() => {
-            console.log(`Client disconnected`);
-        })
-    });
-  }
+				this.time = data.time;
+				this.value = data.value;
 
-  subscribeToTimer(cb) {
-    socket.on('timer', timestamp => cb(null, timestamp));
-    socket.emit('subscribeToTimer', 1000);
-  }
+				this.currentVal.next({ time: this.time, value: this.value });
+				this.oddCount = data.value % 2 === 0 ? this.oddCount : ++this.oddCount;
+				this.evenCount = data.value % 2 === 0 ? ++this.evenCount : this.evenCount;
+				this.medium = this.medium + data.value / (this.oddCount + this.evenCount);
+				this.difference = data.value - (this.chart4Data[this.chart4Data.length - 1] || 0);
 
-  render() {
-    const { number } = this.state;
-    console.log('get to know here');
-    return (
-      <div>
-        {number ? <h1>{`Hello ${number}`}</h1> : <h1>Loading.. please wait!</h1>}
-        <LineChart data={this.source} id="myChart"/>
-        <div style={{marginTop: 200}}>
-        <LineChart data={this.source2} id="myChart1"/>
-        </div>
-        {/* {this.subscribeToTimer((err, val) => {
-          console.log('subscribing again n again')
-          console.log('timeis', val)
-        })} */}   
-            
-        {setTimeout(() =>  io.disconnect(), 5000)}
-      </div>
-    );
-  }
+				this.label = this.getModifiedData(this.label.slice(), new Date(data.time).getSeconds());
+				this.chart1Data = this.getModifiedData(this.chart1Data.slice(), this.value);
+				this.chart2Data = this.getModifiedData(this.chart2Data.slice(), this.medium);
+				this.chart3Data = this.getModifiedData(this.chart3Data.slice(), this.evenCount + this.oddCount);
+				this.chart4Data = this.getModifiedData(this.chart4Data.slice(), this.difference);
+
+				this.source.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data: this.chart3Data }, { label: this.label, data: this.chart4Data }]);
+
+			});
+
+			disconnect$.subscribe(() => {
+				console.log(`Client disconnected`);
+			})
+
+		});
+
+		this.setState({
+			isPLaying: true
+		})
+
+	}
+
+	getModifiedData = (data, newData) => {
+		data.shift();
+		data.push(newData);
+		return data;
+	}
+
+	stopGraph = () => {
+		this.io.disconnect()
+		this.setState({
+			isPLaying: false
+		})
+	}
+
+	render() {
+		return (
+			<div className="container-fluid">
+				<div className="row" style={{ margin: 10 }}>
+					<div className="col-md-6" style={{ marginTop: 10 }}>
+						{!this.state.isPLaying ? <button type="button" className="btn btn-primary" onClick={this.playGraph}>Play</button> :
+							<button type="button" className="btn btn-primary" onClick={this.stopGraph}>Stop</button>}
+					</div>
+					<div className="col-md-6">
+						<Ticker isPLaying={this.state.isPLaying} data={this.currentVal} />
+					</div>
+				</div>
+				<div className="row col-md-12">
+					<div className="col-md-6">
+						<LineChart data={this.source} name="Value Every Second" id="chart1" />
+					</div>
+
+					<div className="col-md-6">
+						<LineChart data={this.source} name="Median Value" id="chart2" />
+					</div>
+				</div>
+				<div className="row col-md-12">
+					<div className="col-md-6">
+						<LineChart data={this.source} name="Odd/Even Count" id="chart3" />
+					</div>
+
+					<div className="col-md-6">
+						<LineChart data={this.source} name="Difference of Values" id="chart4" />
+					</div>
+				</div>
+
+			</div>
+		);
+	}
 }
