@@ -1,3 +1,4 @@
+//ticker view to monitor the current time and data
 import React, { Component } from 'react';
 import './app.css';
 

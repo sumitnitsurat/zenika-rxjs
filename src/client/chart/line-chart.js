@@ -16,6 +16,7 @@ export default class LineChart extends Component {
 
   componentDidMount() {
     window.graphType$.subscribe((type) => { 
+        if(this.chart) { this.chart.destroy(); }
         this.chart = new Chart(this.props.id, {
             type: type,
             data: {

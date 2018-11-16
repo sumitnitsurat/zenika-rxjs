@@ -33,9 +33,15 @@ export default class App extends Component {
 	}
 
 	componentWillMount() {
-		this.source = new Subject();
-		this.currentVal = new Subject();
+		this.source$ = new Subject();
+		this.currentVal$ = new Subject();
 		window.graphType$ = new Subject();
+	}
+
+	componentWillUnmount() {
+		this.source$.unsubscribe();
+		this.currentVal$.unsubscribe();
+		window.graphType$.unsubscribe();
 	}
 
 	componentDidMount() {
@@ -64,7 +70,7 @@ export default class App extends Component {
 				this.time = data.time;
 				this.value = data.value;
 
-				this.currentVal.next({ time: this.time, value: this.value });
+				this.currentVal$.next({ time: this.time, value: this.value });
 				this.oddCount = data.value % 2 === 0 ? this.oddCount : ++this.oddCount;
 				this.evenCount = data.value % 2 === 0 ? ++this.evenCount : this.evenCount;
 				this.medium = this.medium + data.value / (this.oddCount + this.evenCount);
@@ -77,12 +83,12 @@ export default class App extends Component {
 				this.chart3Data2 = this.getModifiedData(this.chart3Data2.slice(), this.oddCount)
 				this.chart4Data = this.getModifiedData(this.chart4Data.slice(), this.difference);
 
-				this.source.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data1: this.chart3Data1, data2: this.chart3Data2 }, { label: this.label, data: this.chart4Data }]);
+				this.source$.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data1: this.chart3Data1, data2: this.chart3Data2 }, { label: this.label, data: this.chart4Data }]);
 
 			});
 
 			disconnect$.subscribe(() => {
-				console.log(`Client disconnected`);
+				console.log('client disconnected')
 			})
 
 		});
@@ -92,22 +98,23 @@ export default class App extends Component {
 		})
 
 	}
-
+	//shift the graph array data and push the new value
 	getModifiedData = (data, newData) => {
 		data.shift();
 		data.push(newData);
 		return data;
 	}
-
+	//disconnect the stream
 	stopGraph = () => {
 		this.io.disconnect()
 		this.setState({
 			isPLaying: false
 		})
 	}
-
+	// switch between bar and line graph and set the graph data and graph type 
 	selectGrpah = (type) => {
 		window.graphType$.next(type);
+		this.source$.next([{ label: this.label, data: this.chart1Data }, { label: this.label, data: this.chart2Data }, { label: this.label, data1: this.chart3Data1, data2: this.chart3Data2 }, { label: this.label, data: this.chart4Data }]);
 		this.setState({ activeGraph: type})
 	}
 
@@ -125,25 +132,25 @@ export default class App extends Component {
 						<button type="button" onClick={() =>this.selectGrpah('bar')} name="bar" className={`btn border-blue ${ activeGraph === 'bar' ? 'btn-primary' : 'btn-default'}`}>Bar Chart</button>
 					</div>
 					<div className="col-md-6">
-						<Ticker isPLaying={this.state.isPLaying} data={this.currentVal} />
+						<Ticker isPLaying={this.state.isPLaying} data={this.currentVal$} />
 					</div>
 				</div>
 				<div className="row col-md-12">
 					<div className="col-md-6">
-						<LineChart data={this.source} name="Value Every Second" id="chart1" />
+						<LineChart data={this.source$} name="Value Every Second" id="chart1" />
 					</div>
 
 					<div className="col-md-6">
-						<LineChart data={this.source} name="Median Value" id="chart2" />
+						<LineChart data={this.source$} name="Median Value" id="chart2" />
 					</div>
 				</div>
 				<div className="row col-md-12">
 					<div className="col-md-6">
-						<LineChart data={this.source} name="Even Count" id="chart3" />
+						<LineChart data={this.source$} name="Even Count" id="chart3" />
 					</div>
 
 					<div className="col-md-6">
-						<LineChart data={this.source} name="Difference of Values" id="chart4" />
+						<LineChart data={this.source$} name="Difference of Values" id="chart4" />
 					</div>
 				</div>
 
